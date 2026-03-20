@@ -1,0 +1,55 @@
+master:
+  push:
+    - docker:
+        image: docker.cnb.cool/zhxycn/env:latest
+      services:
+        - name: docker
+          options:
+            rootlessBuildkitd:
+              enabled: true
+      stages:
+        - name: build and push regular images
+          script: |
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+            PLATFORMS="linux/amd64,linux/arm64"
+
+            for version in $(jq -r 'keys[]' buildinfo.json); do
+              SHA256=$(jq -r --arg v "$version" '.[$v].sha256' buildinfo.json)
+
+              TAG_ARGS=""
+              for tag in $(jq -r --arg v "$version" '.[$v].tags[]' buildinfo.json); do
+                TAG_ARGS="$TAG_ARGS -t ${REGISTRY}:${tag}"
+              done
+
+              docker buildx build \
+                --platform ${PLATFORMS} \
+                -f docker/Dockerfile \
+                --build-arg VERSION=${version} \
+                --build-arg SHA256=${SHA256} \
+                ${TAG_ARGS} \
+                --push \
+                docker/
+            done
+
+        - name: build and push rootless images
+          script: |
+            REGISTRY="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+            PLATFORMS="linux/amd64,linux/arm64"
+
+            for version in $(jq -r 'keys[]' buildinfo.json); do
+              SHA256=$(jq -r --arg v "$version" '.[$v].sha256' buildinfo.json)
+
+              TAG_ARGS=""
+              for tag in $(jq -r --arg v "$version" '.[$v].tags[]' buildinfo.json); do
+                TAG_ARGS="$TAG_ARGS -t ${REGISTRY}:${tag}-rootless"
+              done
+
+              docker buildx build \
+                --platform ${PLATFORMS} \
+                -f docker/Dockerfile.rootless \
+                --build-arg VERSION=${version} \
+                --build-arg SHA256=${SHA256} \
+                ${TAG_ARGS} \
+                --push \
+                docker/
+            done
