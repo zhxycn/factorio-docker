@@ -63,7 +63,7 @@ RUN set -ox pipefail \
     fi \
     && archive="/tmp/factorio_headless_x64_$VERSION.tar.xz" \
     && mkdir -p /opt /factorio \
-    && curl -sSL "https://www.factorio.com/get-download/$VERSION/headless/linux64" -o "$archive" --retry $CURL_RETRIES \
+    && curl -sSL "https://www.factorio.com/get-download/$VERSION/headless/linux64" -o "$archive" --retry $CURL_RETRIES --retry-all-errors \
     && echo "$SHA256  $archive" | sha256sum -c \
     || (sha256sum "$archive" && file "$archive" && exit 1) \
     && tar xf "$archive" --directory /opt \
